@@ -10,6 +10,9 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from src.data_models import SKU, ClassificationResult
 
+from typing import List
+from src.data_models import Category
+
 DATABASE_URL = "sqlite:///pharmacy_analyzer/data/linkages.db"
 
 engine = create_engine(DATABASE_URL, echo=False, future=True)
@@ -147,3 +150,26 @@ def load_categories_from_xlsx(xlsx_path: str, sheet_name: str = 0) -> None:
 
     # Запишем в БД, заменяя таблицу (при необходимости можно сделать if_exists="append")
     df.to_sql("categories", con=engine, if_exists="replace", index=False)
+
+def category_db_to_domain(cat_db: CategoryDB) -> Category:
+    """
+    Маппит ORM-модель CategoryDB в доменный класс Category.
+    """
+    return Category(
+        code=cat_db.code,
+        level=cat_db.level,
+        direction=cat_db.direction,
+        need=cat_db.need,
+        group=cat_db.category,
+        inn_cluster=cat_db.inn_cluster,
+        dosage_form=cat_db.product_type,
+        age_segment=cat_db.age_segment,
+    )
+
+
+def get_all_categories(session: Session) -> List[Category]:
+    """
+    Возвращает все категории классификатора в виде доменных объектов Category.
+    """
+    cats_db: list[CategoryDB] = session.query(CategoryDB).all()
+    return [category_db_to_domain(c) for c in cats_db]
