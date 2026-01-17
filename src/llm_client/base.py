@@ -4,7 +4,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-#from src.data_models import SKU, ClassificationResult  # создадим позже
+from src.data_models import SKU, ClassificationResult  # создадим позже
 
 
 class LLMError(Exception):
