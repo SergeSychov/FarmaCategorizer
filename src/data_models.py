@@ -52,3 +52,14 @@ class ClassificationResult:
     reason: str  # Краткое текстовое обоснование (почему выбрана категория/флаг review)
 
     raw_llm_response: Optional[dict] = None  # Для отладки и аудита
+
+
+@dataclass
+class SKU:
+    """
+    Минимальное описание SKU из базы.
+    """
+    name: str
+    external_id: Optional[str] = None  # например, id ProductLink
+    manufacturer: Optional[str] = None
+    alt_name: Optional[str] = None  # name_asna или другое альтернативное имя
