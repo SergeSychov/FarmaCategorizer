@@ -24,14 +24,14 @@ class Category:
 
     TODO: синхронизировать поля с реальными колонками из xlsx/CSV классификатора.
     """
-    code: str  # Код категории
-    level: int  # Уровень иерархии
-    direction: Optional[str] = None  # Направление
-    need: Optional[str] = None  # Потребность / Нозология
-    group: Optional[str] = None  # Категория/подгруппа
-    inn_cluster: Optional[str] = None  # МНН-кластер
-    dosage_form: Optional[str] = None  # Форма выпуска / тип товара
-    age_segment: Optional[str] = None  # Возрастной сегмент
+    code: str
+    level: Optional[str] = None  # вместо int
+    direction: Optional[str] = None
+    need: Optional[str] = None
+    group: Optional[str] = None
+    inn_cluster: Optional[str] = None
+    dosage_form: Optional[str] = None
+    age_segment: Optional[str] = None
 
 
 @dataclass

@@ -1,6 +1,6 @@
-# src/io/db_io.py
-import pandas as pd
 from __future__ import annotations
+
+import pandas as pd
 
 from contextlib import contextmanager
 from typing import Iterator, List
@@ -48,19 +48,17 @@ class ProductLink(Base):
 class CategoryDB(Base):
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True)  # "Код категории"
-    level = Column(Integer, nullable=False)  # "Уровень иерархии"
-    direction = Column(String, nullable=True)  # "Направление"
-    need = Column(String, nullable=True)  # "Потребность / Нозология"
-    category = Column(String, nullable=True)  # "Категория"
-    inn_cluster = Column(String, nullable=True)  # "МНН-кластер"
-    product_type = Column(String, nullable=True)  # "Тип препарата / товара"
-    age_segment = Column(String, nullable=True)  # "Возрастной сегмент"
-    administration_route = Column(String, nullable=True)  # "Способ введения"
-    differentiation = Column(String, nullable=True)  # "Степень дифференциации категории"
-    comment = Column(Text, nullable=True)  # "Комментарий / правила включения"
-
+    # code есть в таблице, делаем его PK
+    code = Column(String, primary_key=True)  # TEXT
+    level = Column(String, nullable=True)  # TEXT
+    direction = Column(String, nullable=True)  # TEXT
+    need = Column(String, nullable=True)  # TEXT
+    category = Column(String, nullable=True)  # TEXT
+    product_type = Column(String, nullable=True)  # TEXT
+    age_segment = Column(String, nullable=True)  # TEXT
+    administration_route = Column(String, nullable=True)  # TEXT
+    differentiation = Column(String, nullable=True)  # TEXT
+    comment = Column(Text, nullable=True)  # TEXT
 
 @contextmanager
 def get_session() -> Iterator[Session]:
@@ -142,13 +140,17 @@ def load_categories_from_xlsx(xlsx_path: str, sheet_name: str = 0) -> None:
         "Комментарий / правила включения": "comment",
     }
 
-    # Переименуем колонки под поля таблицы
-    df = df.rename(columns=column_mapping)
+    # Переименуем только те колонки, которые реально есть в файле
+    existing_mapping = {
+        src: dst for src, dst in column_mapping.items() if src in df.columns
+    }
+    df = df.rename(columns=existing_mapping)
 
-    # Оставим только нужные поля (если в xlsx есть лишние)
-    df = df[list(column_mapping.values())]
+    # Оставим только те целевые колонки, которые реально получились
+    available_targets = [dst for dst in existing_mapping.values() if dst in df.columns]
+    df = df[available_targets]
 
-    # Запишем в БД, заменяя таблицу (при необходимости можно сделать if_exists="append")
+    # Запишем в БД (если таблица уже есть, заменим)
     df.to_sql("categories", con=engine, if_exists="replace", index=False)
 
 def category_db_to_domain(cat_db: CategoryDB) -> Category:
@@ -156,12 +158,12 @@ def category_db_to_domain(cat_db: CategoryDB) -> Category:
     Маппит ORM-модель CategoryDB в доменный класс Category.
     """
     return Category(
-        code=cat_db.code,
+        code=cat_db.code or "",
         level=cat_db.level,
         direction=cat_db.direction,
         need=cat_db.need,
         group=cat_db.category,
-        inn_cluster=cat_db.inn_cluster,
+        inn_cluster=None,
         dosage_form=cat_db.product_type,
         age_segment=cat_db.age_segment,
     )
@@ -170,6 +172,11 @@ def category_db_to_domain(cat_db: CategoryDB) -> Category:
 def get_all_categories(session: Session) -> List[Category]:
     """
     Возвращает все категории классификатора в виде доменных объектов Category.
+    Игнорирует возможные None в результате ORM-запроса.
     """
-    cats_db: list[CategoryDB] = session.query(CategoryDB).all()
-    return [category_db_to_domain(c) for c in cats_db]
+    cats_db = session.query(CategoryDB).all()
+    return [
+        category_db_to_domain(c)
+        for c in cats_db
+        if c is not None
+    ]
