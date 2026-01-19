@@ -1,0 +1,14 @@
+# виртуальное окружение
+.venv/
+
+# кэши Python/pytest
+__pycache__/
+*.pyc
+
+# локальные данные и артефакты
+TestButch.xlsx
+pharmacy_analyzer/
+*.xlsx
+
+# env
+.env

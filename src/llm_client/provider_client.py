@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import asyncio
 import os
+import json
 from typing import Any, Dict
 
 import httpx
 
 from src.config import config
+from src.config import LLMApiConfig
 from src.data_models import SKU, ClassificationResult, Category
 from src.llm_client.base import LLMClient, LLMError, LLMRetryableError
 from src.classifier.prompt_builder import PromptBuilder
@@ -88,40 +90,52 @@ class ProviderLLMClient(LLMClient):
         }
 
     async def classify_sku_raw(self, sku_name: str) -> Dict[str, Any]:
-        """
-        Формирует промпт, отправляет запрос к LLM и возвращает JSON-ответ как dict.
-        """
-
         sku = SKU(name=sku_name)
-        # здесь используем категории, переданные в конструктор
         categories = self._categories
         user_prompt = self._prompt_builder.build_user_prompt(sku, categories)
 
+        messages = [
+            {
+                "role": "system",
+                "content": getattr(
+                    self._prompt_builder,
+                    "PROMPT_SYSTEM_INSTRUCTIONS",
+                    "",
+                ),
+            },
+            {"role": "user", "content": user_prompt},
+        ]
+
         payload: Dict[str, Any] = {
-            "model": "your-model-name",  # TODO: вынести в конфиг
-            "messages": [
-                {"role": "system", "content": self._prompt_builder.PROMPT_SYSTEM_INSTRUCTIONS}  # type: ignore[attr-defined]
-                if hasattr(self._prompt_builder, "PROMPT_SYSTEM_INSTRUCTIONS")
-                else {"role": "system", "content": ""},
-                {"role": "user", "content": user_prompt},
-            ],
+            "model": config.llm.model,
+            "messages": messages,
+            "temperature": 0,
+            "stream": False,
+            "response_format": {"type": "json_object"},
         }
 
-        response = await self._post_with_retries(endpoint="/chat/completions", json=payload)
+        response = await self._post_with_retries(
+            endpoint=config.llm.endpoint,
+            json=payload,
+        )
 
         if response.status_code >= 400:
-            # Неретрайные ошибки / окончательный фейл
-            raise LLMError(f"LLM API returned HTTP {response.status_code}: {response.text}")
+            raise LLMError(
+                f"LLM API returned HTTP {response.status_code}: {response.text}"
+            )
 
-        # Здесь предполагаем, что провайдер вернёт JSON с нашим полем "content" или сразу JSON-строку
         try:
             data = response.json()
         except ValueError as exc:
             raise LLMError("Failed to parse LLM response as JSON") from exc
 
-        # TODO: адаптировать под реальный формат ответа провайдера
-        # Пока считаем, что data уже является тем JSON, который описан в PROMPT_OUTPUT_FORMAT
-        return data
+        try:
+            content = data["choices"][0]["message"]["content"]
+            parsed = json.loads(content)
+        except (KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise LLMError("Failed to extract JSON from LLM response") from exc
+
+        return parsed
 
     async def classify_sku(self, sku: SKU) -> ClassificationResult:
         """

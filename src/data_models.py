@@ -25,7 +25,7 @@ class Category:
     TODO: синхронизировать поля с реальными колонками из xlsx/CSV классификатора.
     """
     code: str
-    level: Optional[str] = None  # вместо int
+    level: Optional[str] = None
     direction: Optional[str] = None
     need: Optional[str] = None
     group: Optional[str] = None
