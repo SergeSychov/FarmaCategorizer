@@ -8,7 +8,7 @@ from typing import Any, Dict
 import httpx
 
 from src.config import config
-from src.data_models import SKU, ClassificationResult
+from src.data_models import SKU, ClassificationResult, Category
 from src.llm_client.base import LLMClient, LLMError, LLMRetryableError
 from src.classifier.prompt_builder import PromptBuilder
 
@@ -18,16 +18,17 @@ class ProviderLLMClient(LLMClient):
     Реализация LLMClient через HTTP API провайдера.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, categories: list[Category] | None = None) -> None:
         self._base_url = config.llm.base_url
         self._api_key = os.getenv(config.llm.api_key_env_var, "")
         if not self._api_key:
             # Важно: не падаем молча, а даём явную ошибку конфигурации
-            raise LLMError(f"Missing API key in env var {config.llm.api_key_env_var}")
+             raise LLMError(f"Missing API key in env var {config.llm.api_key_env_var}")
 
         self._timeout = config.llm.timeout_seconds
         self._retry_conf = config.llm.retry
         self._prompt_builder = PromptBuilder()
+        self._categories: list[Category] = categories or []
 
     async def _post_with_retries(self, endpoint: str, json: Dict[str, Any]) -> httpx.Response:
         """
@@ -90,11 +91,10 @@ class ProviderLLMClient(LLMClient):
         """
         Формирует промпт, отправляет запрос к LLM и возвращает JSON-ответ как dict.
         """
-        # TODO: сюда нужно будет передавать реальный список категорий,
-        # пока передаем пустой, чтобы сделать скелет.
-        sku = SKU(name=sku_name)
-        categories: list = []
 
+        sku = SKU(name=sku_name)
+        # здесь используем категории, переданные в конструктор
+        categories = self._categories
         user_prompt = self._prompt_builder.build_user_prompt(sku, categories)
 
         payload: Dict[str, Any] = {
