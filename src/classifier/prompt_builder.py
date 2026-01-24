@@ -22,23 +22,27 @@ PROMPT_SYSTEM_INSTRUCTIONS = """
 4) На основании предоставленного дерева категорий выбрать ОДНУ наиболее подходящую категорию.
 5) Если информации недостаточно или совпадения неоднозначные — понижать уверенность и помечать результат как needs_review = true.
 6) НЕ выдумывать данные, которых нет в достоверных источниках. Лучше честно указать, что данных недостаточно.
+7) Всегда возвращай ровно один JSON-объект строго заданной структуры, без текста вокруг.
+8) Убедись, что confidence находится в диапазоне от 0 до 1 и согласован с твоей уверенностью.
 """.strip()
 
 
 PROMPT_OUTPUT_FORMAT = r"""
-Ответ верни строго в формате JSON с такими полями верхнего уровня:
+Верни ОДИН объект JSON СТРОГО следующей структуры (без комментариев и текста вокруг):
+
 {
-  "inn": str | null,
-  "dosage_form": str | null,
-  "age_restriction": str | null,
-  "otc": true | false | null,
-  "category_code": str | null,
-  "category_path": str | null,
-  "confidence": float,  // от 0 до 1
-  "needs_review_hint": bool,  // твоя рекомендация, нужно ли ревью
-  "reason": str  // краткое текстовое объяснение выбора категории
+  "inn": string или null,
+  "dosage_form": string или null,
+  "age_restriction": string или null,
+  "otc": true или false или null,
+  "category_code": string или null,
+  "category_path": string или null,
+  "confidence": number от 0 до 1,
+  "needs_review_hint": true или false,
+  "reason": string
 }
-Без дополнительных комментариев и текста вне JSON.
+
+Никакого текста до или после JSON, никаких пояснений вне полей объекта.
 """.strip()
 
 

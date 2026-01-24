@@ -24,27 +24,16 @@ class ClassifierService:
         self._hard_reject_threshold = config.classifier.hard_reject_threshold
 
     async def classify_product(self, sku: SKU) -> ClassificationResult:
-        """
-        Основной метод, который будет вызываться внешним кодом.
-
-        TODO: когда появится формат JSON-ответа от LLM, здесь нужно будет:
-        - вызвать llm_client.classify_sku_raw или classify_sku;
-        - разобрать JSON;
-        - оценить confidence;
-        - заполнить ClassificationResult и флаг needs_review.
-        """
-        # Пока простая заглушка, чтобы была рабочая структура.
-        # Позже будет реальная логика маппинга полей.
         raw_result = await self._llm_client.classify_sku(sku)
-
-        # На первом шаге считаем, что LLM уже вернул корректный ClassificationResult.
-        # В будущем сюда можно добавить дополнительную пост-обработку.
         result = raw_result
 
-        # Применяем пороги уверенности
-        needs_review = self._should_mark_needs_review(result.confidence)
-        result.needs_review = needs_review
+        # Базовое решение по порогам
+        needs_review_by_conf = self._should_mark_needs_review(result.confidence)
 
+        # Если модель явно просит ревью — уважаем это
+        model_hint = bool(result.needs_review)
+
+        result.needs_review = model_hint or needs_review_by_conf
         return result
 
     def _should_mark_needs_review(self, confidence: float) -> bool:

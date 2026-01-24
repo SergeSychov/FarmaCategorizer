@@ -1,15 +1,20 @@
+# src/smoke_deepseek.py
 import asyncio
 
-from src.config import config
 from src.llm_client.provider_client import ProviderLLMClient
-from src.data_models import Category, SKU
+from src.data_models import Category
+from src.config import config
+
 
 async def main():
-    categories = []  # можно временно пустой список
+    # Пока можно пустой список категорий
+    categories: list[Category] = []
+
     client = ProviderLLMClient(categories=categories)
 
     raw = await client.classify_sku_raw("Нурофен Форте, таблетки")
-    print("RAW:", raw)
+    print("RAW LLM RESPONSE:", raw)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
