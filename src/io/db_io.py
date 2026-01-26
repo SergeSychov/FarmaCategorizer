@@ -76,12 +76,33 @@ def get_session() -> Iterator[Session]:
 def product_link_to_sku(pl: ProductLink) -> SKU:
     """
     Строит SKU из записи product_links.
+
+    Логика:
+    - если name_1c пустой или равен "nan" (как текст), берём name_asna;
+    - если и там мусор, всё равно используем то, что есть, но LLM, скорее всего, вернёт низкий confidence.
     """
+    def _clean_name(value: object) -> str | None:
+        if value is None:
+            return None
+        s = str(value).strip()
+        if not s:
+            return None
+        # Частый случай: из pandas/Excel попадает строка "nan"
+        if s.lower() == "nan":
+            return None
+        return s
+
+    name_1c = _clean_name(pl.name_1c)
+    name_asna = _clean_name(pl.name_asna)
+
+    # Приоритет: нормальное имя из 1С, иначе — ASNA
+    name = name_1c or name_asna or "UNKNOWN_SKU"
+
     return SKU(
-        name=pl.name_1c,
+        name=name,
         external_id=str(pl.id),
-        manufacturer=pl.manufacturer_1c,
-        alt_name=pl.name_asna,
+        manufacturer=_clean_name(pl.manufacturer_1c),
+        alt_name=name_asna,
     )
 
 
