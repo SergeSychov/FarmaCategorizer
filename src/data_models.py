@@ -9,12 +9,11 @@ from typing import Optional
 class SKU:
     """
     Минимальное описание SKU из базы.
-
-    Пока гарантировано только name, остальные поля могут добавиться позже
-    (ID из БД, код категории из исходной выгрузки и т.п.).
     """
     name: str
-    external_id: Optional[str] = None  # например, ID в региональной базе
+    external_id: Optional[str] = None  # например, id ProductLink
+    manufacturer: Optional[str] = None
+    alt_name: Optional[str] = None  # name_asna или другое альтернативное имя
 
 
 @dataclass
@@ -52,14 +51,3 @@ class ClassificationResult:
     reason: str  # Краткое текстовое обоснование (почему выбрана категория/флаг review)
 
     raw_llm_response: Optional[dict] = None  # Для отладки и аудита
-
-
-@dataclass
-class SKU:
-    """
-    Минимальное описание SKU из базы.
-    """
-    name: str
-    external_id: Optional[str] = None  # например, id ProductLink
-    manufacturer: Optional[str] = None
-    alt_name: Optional[str] = None  # name_asna или другое альтернативное имя

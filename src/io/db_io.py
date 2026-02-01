@@ -54,6 +54,7 @@ class CategoryDB(Base):
     direction = Column(String, nullable=True)  # TEXT
     need = Column(String, nullable=True)  # TEXT
     category = Column(String, nullable=True)  # TEXT
+    inn_cluster = Column(String, nullable=True)  # TEXT, «МНН-кластер» из xlsx
     product_type = Column(String, nullable=True)  # TEXT
     age_segment = Column(String, nullable=True)  # TEXT
     administration_route = Column(String, nullable=True)  # TEXT
@@ -136,6 +137,16 @@ def get_active_product_links(session: Session, limit: int = 100) -> List[Product
         .all()
     )
 
+def _normalize_column_name(name: str) -> str:
+    """
+    Нормализует название колонки: заменяет Unicode-дефисы (U+2011, U+2010 и т.п.)
+    на обычный ASCII-дефис (U+002D). Excel часто использует non-breaking hyphen.
+    """
+    for char in ("\u2011", "\u2010", "\u2212", "\uFE58", "\u2013"):
+        name = name.replace(char, "-")
+    return name
+
+
 def load_categories_from_xlsx(xlsx_path: str, sheet_name: str = 0) -> None:
     """
     Загружает классификатор категорий из xlsx в таблицу categories.
@@ -144,6 +155,9 @@ def load_categories_from_xlsx(xlsx_path: str, sheet_name: str = 0) -> None:
     Маппинг можно будет скорректировать, когда приедет финальный файл.
     """
     df = pd.read_excel(xlsx_path, sheet_name=sheet_name)
+
+    # Нормализуем названия колонок (Excel может использовать U+2011 вместо U+002D)
+    df.columns = [_normalize_column_name(str(c)) for c in df.columns]
 
     # Простейший маппинг колонок xlsx -> поля модели.
     # TODO: скорректировать названия колонок под реальный файл.
@@ -184,7 +198,7 @@ def category_db_to_domain(cat_db: CategoryDB) -> Category:
         direction=cat_db.direction,
         need=cat_db.need,
         group=cat_db.category,
-        inn_cluster=None,
+        inn_cluster=getattr(cat_db, "inn_cluster", None),
         dosage_form=cat_db.product_type,
         age_segment=cat_db.age_segment,
     )

@@ -34,7 +34,7 @@ def test_classifier_marks_needs_review_for_low_confidence():
 
     client.classify_sku = AsyncMock(return_value=fake_result)
 
-    service = ClassifierService(llm_client=client)
+    service = ClassifierService(llm_client=client, categories=[])
 
     result = asyncio.run(service.classify_product(SKU(name="TEST SKU")))
 

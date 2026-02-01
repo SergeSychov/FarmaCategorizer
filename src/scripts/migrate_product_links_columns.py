@@ -1,4 +1,8 @@
 # src/scripts/migrate_product_links_columns.py
+"""
+Миграция БД: добавление колонок в product_links и categories.
+Запуск: python -m src.scripts.migrate_product_links_columns
+"""
 from __future__ import annotations
 
 import sqlite3
@@ -14,28 +18,47 @@ def column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
     return column in cols
 
 
+def table_exists(cursor: sqlite3.Cursor, table: str) -> bool:
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    )
+    return cursor.fetchone() is not None
+
+
 def main() -> None:
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    columns_to_add = [
+    # --- product_links ---
+    product_links_columns = [
         ("category_code", "TEXT"),
         ("category_path", "TEXT"),
         ("inn", "TEXT"),
         ("dosage_form", "TEXT"),
         ("age_restriction", "TEXT"),
-        ("otc", "INTEGER"),           # 0/1 как bool
+        ("otc", "INTEGER"),
         ("confidence", "REAL"),
-        ("needs_review", "INTEGER"),  # 0/1 как bool
+        ("needs_review", "INTEGER"),
         ("classification_reason", "TEXT"),
     ]
 
-    for name, coltype in columns_to_add:
+    for name, coltype in product_links_columns:
         if not column_exists(cur, "product_links", name):
-            print(f"Adding column {name} {coltype}")
+            print(f"product_links: adding column {name} ({coltype})")
             cur.execute(f"ALTER TABLE product_links ADD COLUMN {name} {coltype};")
         else:
-            print(f"Column {name} already exists, skipping")
+            print(f"product_links: column {name} already exists")
+
+    # --- categories: inn_cluster ---
+    if table_exists(cur, "categories"):
+        if not column_exists(cur, "categories", "inn_cluster"):
+            print("categories: adding column inn_cluster (TEXT)")
+            cur.execute("ALTER TABLE categories ADD COLUMN inn_cluster TEXT;")
+        else:
+            print("categories: column inn_cluster already exists")
+    else:
+        print("categories: table does not exist, skipping (will be created by load_categories_from_xlsx)")
 
     conn.commit()
     conn.close()

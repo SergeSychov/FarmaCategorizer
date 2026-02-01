@@ -39,7 +39,7 @@ async def classify_batch(limit: int = 10) -> None:
         product_links = get_active_product_links(session, limit=limit)
 
         llm_client = ProviderLLMClient(categories=categories)
-        service = ClassifierService(llm_client=llm_client)
+        service = ClassifierService(llm_client=llm_client, categories=categories)
 
         total = len(product_links)
         classified_ok = 0
